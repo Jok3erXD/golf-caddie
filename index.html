@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Rheinblick Tour Caddie</title>
+    <title>Rheinblick Tour</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -10,12 +10,19 @@
         body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: white; overflow: hidden; }
         #map { height: 100vh; width: 100vw; background: #121212; }
         
+        /* Touchpad Layer (Unsichtbar) */
+        #touchPad {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1500; display: none; cursor: move;
+        }
+
         /* Oben: Loch-Leiste */
         .controls-top {
             position: absolute; top: 10px; left: 0; right: 0;
             z-index: 1000; display: flex; gap: 6px; overflow-x: auto; 
             padding: 0 10px 6px 10px; scrollbar-width: none;
         }
+        .controls-top::-webkit-scrollbar { display: none; }
         .btn-hole {
             background: #2c2c2e; color: #888; border: 1px solid #3a3a3c; padding: 8px 14px; 
             border-radius: 8px; font-weight: bold; flex-shrink: 0; font-size: 15px;
@@ -28,47 +35,45 @@
             pointer-events: none; display: flex; justify-content: space-between; align-items: flex-start;
         }
 
-        /* Linker Stapel (Infos) */
-        .hud-left {
-            display: flex; flex-direction: column; gap: 6px; align-items: flex-start; pointer-events: auto;
-        }
-
-        /* Rechter Stapel (Tools) */
-        .hud-right {
-            display: flex; flex-direction: column; gap: 6px; align-items: flex-end; pointer-events: auto;
-        }
+        .hud-left, .hud-right { display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
+        .hud-right { align-items: flex-end; }
         
-        /* Badges Design */
+        /* Badges */
         .hud-badge {
             background: rgba(28, 28, 30, 0.9); padding: 8px 12px; border-radius: 10px;
             border: 1px solid #444; backdrop-filter: blur(10px);
-            display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; min-width: 80px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
         
-        /* GPS Badge (Hauptinfo) */
-        .gps-val { font-size: 20px; font-weight: 800; color: white; letter-spacing: -0.5px; }
-        .gps-label { font-size: 9px; color: #888; text-transform: uppercase; font-weight: 600; margin-left: 4px; }
+        .gps-val { font-size: 22px; font-weight: 800; color: white; line-height: 1; }
+        .gps-label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
+        .sub-dist { font-size: 11px; color: #4CD964; font-weight: 600; margin-top: 4px; border-top: 1px solid #444; padding-top: 2px; }
 
-        /* Modifier Badges (PlaysLike & Wind) */
+        /* Modifier Badge */
         .mod-badge {
-            padding: 6px 10px; font-size: 13px; font-weight: 600; display: none; /* Initial hidden */
+            padding: 6px 10px; font-size: 12px; font-weight: 700; display: none; 
+            flex-direction: row; align-items: center; justify-content: space-between; gap: 8px;
+            border: 1px solid #FFD60A; color: #FFD60A;
         }
         .btn-close-mod {
             background: rgba(255, 69, 58, 0.2); color: #FF453A; border: none; border-radius: 50%; 
-            width: 20px; height: 20px; font-size: 12px; font-weight: bold;
-            display: flex; align-items: center; justify-content: center; margin-left: 8px;
+            width: 18px; height: 18px; font-size: 10px; font-weight: bold;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
 
-        /* Wind Trigger Button (Rechts) */
-        .btn-wind-trigger {
-            background: rgba(28, 28, 30, 0.9); width: 44px; height: 44px; border-radius: 12px;
-            border: 1px solid #444; display: flex; align-items: center; justify-content: center;
-            font-size: 22px; cursor: pointer; color: #0A84FF; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        /* Rechte Buttons */
+        .btn-icon-square {
+            background: rgba(28, 28, 30, 0.9); width: 44px; height: 44px; border-radius: 10px;
+            border: 1px solid #444; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
+        .icon-lg { font-size: 20px; line-height: 1; }
+        .icon-lbl { font-size: 8px; color: #aaa; text-transform: uppercase; margin-top: 2px; }
 
-        /* Calibration Button (Unten Mitte) */
+        /* Calibration Button */
         .calib-btn-container {
-            position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); z-index: 950;
+            position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%); z-index: 950;
         }
         .btn-calib {
             background: #FFD60A; color: black; border: none; padding: 10px 20px;
@@ -76,22 +81,30 @@
             font-size: 14px; display: flex; align-items: center; gap: 6px;
         }
 
-        /* Unten: Schläger */
+        /* Unten: Scrollbare Schläger Leiste */
         .controls-bottom { 
-            position: absolute; bottom: 30px; left: 10px; right: 10px;
-            z-index: 1000; display: flex; gap: 8px; height: 60px;
+            position: absolute; bottom: 20px; left: 0; right: 0;
+            z-index: 1000; height: 75px;
+            overflow-x: auto; white-space: nowrap;
+            padding: 0 10px; -webkit-overflow-scrolling: touch;
+            display: flex; align-items: center; gap: 8px;
+            -ms-overflow-style: none; scrollbar-width: none;
         }
-        .club-container { display: flex; gap: 6px; flex: 1; justify-content: center; }
+        .controls-bottom::-webkit-scrollbar { display: none; }
         
         .club-card {
-            background: rgba(28, 28, 30, 0.95); padding: 5px; border-radius: 10px; 
+            background: rgba(28, 28, 30, 0.95); padding: 8px 0; border-radius: 12px; 
             text-align: center; border: 1px solid #3a3a3c; cursor: pointer;
-            display: flex; flex-direction: column; justify-content: center; color: #eee;
-            flex: 1; max-width: 32%;
+            display: inline-block; width: 70px; flex-shrink: 0; color: #eee;
+            transition: transform 0.1s;
         }
-        .club-card.selected { border-color: #007AFF; background: #1c1c1e; box-shadow: 0 0 0 2px rgba(0,122,255,0.3); }
-        .club-name { font-weight: 700; font-size: 14px; }
-        .club-dist { font-size: 11px; color: #888; }
+        .club-card.selected { 
+            border-color: #007AFF; background: #007AFF; color: white;
+            box-shadow: 0 0 10px rgba(0,122,255,0.5); transform: scale(1.05);
+        }
+        .club-card.selected .club-dist { color: white; opacity: 0.9; }
+        .club-name { font-weight: 800; font-size: 15px; display: block; }
+        .club-dist { font-size: 11px; color: #888; display: block; margin-top: 2px; }
 
         .btn-action {
             background: #2c2c2e; color: white; border: 1px solid #3a3a3c; border-radius: 10px;
@@ -101,16 +114,28 @@
         /* Modals */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 2000; 
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 2000; 
             justify-content: center; align-items: center;
         }
         .modal-content {
-            background: #1c1c1e; width: 80%; border-radius: 16px; padding: 20px; 
-            border: 1px solid #333; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: #1c1c1e; width: 85%; max-height: 80%; overflow-y: auto;
+            border-radius: 16px; padding: 20px; border: 1px solid #333; text-align: center;
         }
         
-        /* Wind Menu Grid */
-        .wind-row { display: flex; gap: 8px; margin-bottom: 12px; }
+        /* Distanz Tabelle Fix */
+        .dist-table { width: 100%; border-collapse: collapse; margin-top: 10px; color: #eee; font-size: 14px; }
+        /* Headers */
+        .dist-table th { border-bottom: 1px solid #444; padding: 8px; color: #888; font-size: 11px; }
+        .dist-table th:first-child { text-align: left; padding-left: 10px; } /* Links bündig */
+        .dist-table th:nth-child(2), .dist-table th:nth-child(3) { text-align: center; } /* Zahlen zentriert */
+        
+        /* Body */
+        .dist-table td { border-bottom: 1px solid #333; padding: 10px; font-weight: 600; }
+        .dist-table td:first-child { text-align: left; padding-left: 10px; font-weight: 800; color: #007AFF; } /* Name links */
+        .dist-table td:nth-child(2), .dist-table td:nth-child(3) { text-align: center; } /* Zahlen zentriert */
+
+        /* Wind Menu */
+        .wind-row { display: flex; gap: 8px; margin-bottom: 10px; }
         .btn-wind-opt { 
             flex: 1; padding: 12px; background: #2c2c2e; border: 1px solid #3a3a3c; 
             color: #aaa; border-radius: 10px; font-weight: 600; font-size: 13px;
@@ -124,24 +149,49 @@
 
         .map-label { color: white; font-weight: 700; text-shadow: 0 1px 3px black; font-size: 12px; text-align: center; pointer-events: none; }
         .tee-marker { background: white; border: 4px solid #333; border-radius: 50%; width: 18px; height: 18px; box-shadow: 0 0 5px black; }
+        
+        /* PIN Styles (DELAY FIX: Transition removed for top/left) */
+        .custom-pin {
+            background-color: #007AFF; width: 24px; height: 24px; 
+            border: 3px solid white; border-radius: 50%; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            /* Nur Transform (Scale) und Farbe animieren, NICHT die Position! */
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s;
+        }
+        /* Aktiv: Rot Pulsierend */
+        .custom-pin.active {
+            background-color: #FF453A;
+            border-color: #FFD60A;
+            transform: scale(1.5); /* Deutlich grösser */
+            box-shadow: 0 0 20px rgba(255, 69, 58, 0.6);
+            z-index: 9999 !important;
+        }
     </style>
 </head>
 <body>
 
 <div id="loader">
-    <h2>🚀 Lade Platz...</h2>
-    <div id="loadStatus">0 / 18</div>
+    <h2>🚀 Lade Karten...</h2>
+    <div id="loadStatus" style="color:#888; margin-top:5px;">0 / 18</div>
 </div>
 
 <div id="map"></div>
 
+<div id="touchPad"></div>
+
 <div class="hud-container">
     <div class="hud-left">
         <div class="hud-badge">
-            <span class="gps-val" id="gpsDistDisplay">--</span> <span class="gps-label">m</span>
+            <div>
+                <div class="gps-val" id="gpsDistDisplay">--</div>
+                <div class="gps-label">GPS Ziel</div>
+            </div>
+            <div>
+                <div class="sub-dist" id="greenDistDisplay">-- m Grün</div>
+            </div>
         </div>
         
-        <div class="hud-badge mod-badge" id="calibBadge" style="border-color: #FFD60A; color: #FFD60A;">
+        <div class="hud-badge mod-badge" id="calibBadge">
             <span id="calibText">PlaysLike</span>
             <button class="btn-close-mod" onclick="resetCalibration()">✕</button>
         </div>
@@ -153,33 +203,34 @@
     </div>
 
     <div class="hud-right">
-        <div class="btn-wind-trigger" onclick="openWindModal()">💨</div>
+        <div class="btn-icon-square" onclick="openWindModal()">
+            <span class="icon-lg" id="windIconDisplay">💨</span>
+            <span class="icon-lbl">Wind</span>
+        </div>
+        
+        <div class="btn-icon-square" onclick="openDistTable()">
+            <span class="icon-lg">📋</span>
+            <span class="icon-lbl">Dist</span>
+        </div>
     </div>
 </div>
 
 <div class="calib-btn-container">
-    <button class="btn-calib" onclick="calibrateShot()">🎯 PlaysLike</button>
+    <button class="btn-calib" onclick="calibrateShot()">🎯 Kalibrieren</button>
 </div>
 
 <div class="controls-top" id="holeNav"></div>
 
-<div class="controls-bottom">
-    <div id="clubOptions" class="club-container"></div>
-    <button class="btn-action" onclick="openSelectModal()">+</button>
-</div>
+<div class="controls-bottom" id="clubScroll"></div>
 
 <div id="windModal" class="modal-overlay" onclick="closeWindModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 style="margin-top:0; color:#eee;">Wind Setup</h3>
-        
-        <div style="text-align:left; font-size:11px; color:#666; margin-bottom:5px;">STÄRKE</div>
         <div class="wind-row">
             <button class="btn-wind-opt" id="ws-1" onclick="setWindStrength(1)">Leicht</button>
             <button class="btn-wind-opt" id="ws-2" onclick="setWindStrength(2)">Mittel</button>
             <button class="btn-wind-opt" id="ws-3" onclick="setWindStrength(3)">Stark</button>
         </div>
-
-        <div style="text-align:left; font-size:11px; color:#666; margin-bottom:5px;">RICHTUNG (Vom Spieler)</div>
         <div class="wind-row">
             <button class="btn-wind-opt" id="wd-head" onclick="setWindDir('head')">⬇️ Gegen</button>
             <button class="btn-wind-opt" id="wd-tail" onclick="setWindDir('tail')">⬆️ Rücken</button>
@@ -188,14 +239,23 @@
             <button class="btn-wind-opt" id="wd-left" onclick="setWindDir('left')">⬅️ Links</button>
             <button class="btn-wind-opt" id="wd-right" onclick="setWindDir('right')">➡️ Rechts</button>
         </div>
-        
-        <div style="margin-top:15px; font-size:12px; color:#555;">Klicke ausserhalb zum Schliessen</div>
+    </div>
+</div>
+
+<div id="distModal" class="modal-overlay" onclick="closeDistTable()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0; color:#eee;">Schläger Distanzen</h3>
+        <button onclick="preloadMapAction()" style="width:100%; padding:10px; background:#333; border:1px solid #555; color:#aaa; border-radius:8px; font-size:11px; margin-bottom:15px;">🌍 Offline Karten laden</button>
+        <table class="dist-table">
+            <thead><tr><th>Schläger</th><th>Carry</th><th>Total</th></tr></thead>
+            <tbody id="distTableBody"></tbody>
+        </table>
+        <button onclick="closeDistTable()" style="width:100%; padding:12px; background:#007AFF; color:white; border:none; border-radius:8px; margin-top:15px;">Schliessen</button>
     </div>
 </div>
 
 <div id="selectModal" class="modal-overlay" onclick="closeSelectModal()">
-    <div class="modal-content" id="selectList" onclick="event.stopPropagation()">
-        </div>
+    <div class="modal-content" id="selectList" onclick="event.stopPropagation()"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -258,8 +318,9 @@
     }
 
     var currentClub, startPoint, greenPoint, targetMarker;
+    var remoteActive = false; // Touchpad State
 
-    // --- GAME LOGIK ---
+    // --- LOGIK ---
     function loadHole(num) {
         document.querySelectorAll('.btn-hole').forEach(b => b.classList.remove('active'));
         document.getElementById('h'+num).classList.add('active');
@@ -271,9 +332,7 @@
         startPoint = [tee.geometry.coordinates[1], tee.geometry.coordinates[0]];
         greenPoint = [green.geometry.coordinates[1], green.geometry.coordinates[0]];
 
-        calibFactor = 1.0; 
-        updateCalibUI();
-        // Wind lassen wir wie er ist, oft ändert der sich ja nicht pro Loch
+        calibFactor = 1.0; updateCalibUI();
 
         uiLayer.clearLayers();
         shotLayer.clearLayers();
@@ -288,14 +347,57 @@
         var bearing = turf.bearing(turf.point([startPoint[1], startPoint[0]]), turf.point([greenPoint[1], greenPoint[0]]));
         var landGeo = turf.destination(turf.point([startPoint[1], startPoint[0]]), currentClub.total/1000, bearing);
         
-        var pinIcon = L.divIcon({ className: 'custom-pin', html: '<div style="background-color:#007AFF; width:24px; height:24px; border:3px solid white; border-radius:50%; box-shadow:0 0 8px black;"></div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+        var pinIcon = L.divIcon({ className: 'custom-pin', iconSize: [24, 24], iconAnchor: [12, 12] });
+        
         targetMarker = L.marker([landGeo.geometry.coordinates[1], landGeo.geometry.coordinates[0]], {icon: pinIcon, draggable:true, zIndexOffset: 2000}).addTo(uiLayer);
+        targetMarker.on('click', toggleRemoteMode);
         targetMarker.on('drag', updateShotPattern);
 
         map.fitBounds([startPoint, greenPoint], {padding: [40, 40], animate: false});
-        renderClubButtons(idealIdx);
+        renderClubScroll(idealIdx);
         setTimeout(() => updateShotPattern(), 100);
     }
+
+    // --- REMOTE TOUCH CONTROL ---
+    function toggleRemoteMode() {
+        remoteActive = !remoteActive;
+        var pad = document.getElementById('touchPad');
+        var pinIconDiv = targetMarker.getElement();
+
+        if(remoteActive) {
+            pad.style.display = 'block';
+            if(pinIconDiv) pinIconDiv.classList.add('active');
+            map.dragging.disable(); 
+        } else {
+            pad.style.display = 'none';
+            if(pinIconDiv) pinIconDiv.classList.remove('active');
+            map.dragging.enable();
+        }
+    }
+
+    var touchPad = document.getElementById('touchPad');
+    var lastX, lastY;
+
+    function handleInputStart(x, y) { lastX = x; lastY = y; }
+    function handleInputMove(x, y) {
+        if(!remoteActive) return;
+        var dx = x - lastX; var dy = y - lastY;
+        
+        var currentLatLng = targetMarker.getLatLng();
+        var point = map.latLngToContainerPoint(currentLatLng);
+        var newPoint = L.point(point.x + dx, point.y + dy);
+        var newLatLng = map.containerPointToLatLng(newPoint);
+        
+        targetMarker.setLatLng(newLatLng);
+        updateShotPattern();
+        lastX = x; lastY = y;
+    }
+
+    touchPad.addEventListener('mousedown', e => handleInputStart(e.clientX, e.clientY));
+    touchPad.addEventListener('mousemove', e => { if(e.buttons === 1) handleInputMove(e.clientX, e.clientY); });
+    touchPad.addEventListener('click', toggleRemoteMode); 
+    touchPad.addEventListener('touchstart', e => { handleInputStart(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, {passive: false});
+    touchPad.addEventListener('touchmove', e => { handleInputMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, {passive: false});
 
     // --- ACTIONS ---
     function calibrateShot() {
@@ -307,9 +409,8 @@
         if(input != null && input > 0) {
             calibFactor = parseInt(input) / gpsDist;
             updateCalibUI();
-            
             var idealIdx = getIdealClubIndex(parseInt(input));
-            renderClubButtons(idealIdx);
+            renderClubScroll(idealIdx);
             updateShotPattern();
         }
     }
@@ -334,17 +435,19 @@
 
     function updateWindUI() {
         document.querySelectorAll('.btn-wind-opt').forEach(b => b.classList.remove('active'));
-        if(windStrength > 0) document.getElementById('ws-'+windStrength).classList.add('active');
+        if(windStrength>0) document.getElementById('ws-'+windStrength).classList.add('active');
         if(windDir !== 'none') document.getElementById('wd-'+windDir).classList.add('active');
 
         var badge = document.getElementById('windBadge');
         if(windStrength === 0) {
             badge.style.display = 'none';
+            document.getElementById('windIconDisplay').innerText = "💨";
         } else {
             badge.style.display = 'flex';
             var arrow = (windDir==='head'?'⬇️':windDir==='tail'?'⬆️':windDir==='left'?'⬅️':windDir==='right'?'➡️':'⏺');
             var txt = (windStrength===1?'Leicht':windStrength===2?'Mittel':'Stark');
             document.getElementById('windText').innerText = arrow + " " + txt;
+            document.getElementById('windIconDisplay').innerText = arrow; 
         }
     }
 
@@ -354,25 +457,28 @@
 
         var tPos = targetMarker.getLatLng();
         var sPos = L.latLng(startPoint);
+        
+        // Distances
         var distToTarget = turf.distance(turf.point([sPos.lng, sPos.lat]), turf.point([tPos.lng, tPos.lat]), {units: 'meters'});
+        var distToGreen = turf.distance(turf.point([tPos.lng, tPos.lat]), turf.point([greenPoint[1], greenPoint[0]]), {units: 'meters'});
+        
         document.getElementById('gpsDistDisplay').innerText = Math.round(distToTarget);
+        document.getElementById('greenDistDisplay').innerText = Math.round(distToGreen) + " m Grün";
 
-        // 1. Wind
+        // Physics
         var windMod = 0;
         if(windDir === 'head') windMod = -0.05 * windStrength; 
         if(windDir === 'tail') windMod = 0.05 * windStrength;
 
-        // 2. Total Math: (Club * Wind) / Calib
         var effCarry = (currentClub.carry * (1 + windMod)) / calibFactor;
         var effTotal = (currentClub.total * (1 + windMod)) / calibFactor;
 
-        // 3. Drift
         var sideShiftAngle = 0;
         if(windDir === 'left') sideShiftAngle = 90; 
         if(windDir === 'right') sideShiftAngle = -90;
         var driftDist = (windDir === 'left' || windDir === 'right') ? (effTotal * 0.04 * windStrength) : 0;
 
-        // 4. Drawing
+        // Drawing
         var startGeo = turf.point([sPos.lng, sPos.lat]);
         var targetGeo = turf.point([tPos.lng, tPos.lat]);
         var aimBearing = turf.bearing(startGeo, targetGeo);
@@ -415,51 +521,82 @@
         let b=0,m=999; clubs.forEach((c,i)=>{let d=Math.abs(c.total-requiredDist);if(d<m){m=d;b=i}}); return b; 
     }
 
-    function renderClubButtons(idx) {
-        var d = document.getElementById('clubOptions'); d.innerHTML = '';
-        var show = [idx]; if(idx>0) show.unshift(idx-1); if(idx<clubs.length-1) show.push(idx+1);
-        show.forEach(i => {
-            let c = clubs[i];
+    // --- SCROLLABLE CLUB MENU ---
+    function renderClubScroll(activeIdx) {
+        var container = document.getElementById('clubScroll');
+        container.innerHTML = '';
+        
+        clubs.forEach((c, i) => {
             let el = document.createElement('div');
             el.className = 'club-card' + (c.id===currentClub.id ? ' selected' : '');
+            el.id = 'club-card-' + i;
             el.innerHTML = `<span class="club-name">${c.name}</span><span class="club-dist">${c.total}m</span>`;
-            el.onclick = () => {
-                var tPos = targetMarker.getLatLng();
-                var bearing = turf.bearing(turf.point([startPoint[1], startPoint[0]]), turf.point([tPos.lng, tPos.lat]));
-                var newDist = c.total / calibFactor; 
-                var newLand = turf.destination(turf.point([startPoint[1], startPoint[0]]), newDist/1000, bearing);
-                currentClub = c; targetMarker.setLatLng([newLand.geometry.coordinates[1], newLand.geometry.coordinates[0]]);
-                updateShotPattern(); renderClubButtons(i);
-            };
-            d.appendChild(el);
+            el.onclick = () => { selectClub(i); };
+            container.appendChild(el);
         });
+
+        setTimeout(() => {
+            var activeEl = document.getElementById('club-card-' + activeIdx);
+            if(activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        }, 100);
     }
 
+    function selectClub(i) {
+        var c = clubs[i];
+        
+        var tPos = targetMarker.getLatLng();
+        var bearing = turf.bearing(turf.point([startPoint[1], startPoint[0]]), turf.point([tPos.lng, tPos.lat]));
+        var newDist = c.total / calibFactor; 
+        var newLand = turf.destination(turf.point([startPoint[1], startPoint[0]]), newDist/1000, bearing);
+        
+        currentClub = c; 
+        targetMarker.setLatLng([newLand.geometry.coordinates[1], newLand.geometry.coordinates[0]]);
+        
+        renderClubScroll(i);
+        updateShotPattern(); 
+    }
+
+    // --- MODALS ---
+    function openWindModal() { document.getElementById('windModal').style.display = 'flex'; updateWindUI(); }
+    function closeWindModal() { document.getElementById('windModal').style.display = 'none'; }
+    
+    function openDistTable() {
+        var body = document.getElementById('distTableBody');
+        body.innerHTML = '';
+        clubs.forEach(c => {
+            body.innerHTML += `<tr><td>${c.name}</td><td>${c.carry}m</td><td>${c.total}m</td></tr>`;
+        });
+        document.getElementById('distModal').style.display = 'flex';
+    }
+    function closeDistTable() { document.getElementById('distModal').style.display = 'none'; }
+    
     function openSelectModal() { 
         var l = document.getElementById('selectList'); l.innerHTML = '';
         l.innerHTML += `<button onclick="preloadMapAction()" style="width:100%; padding:15px; background:#34C759; color:white; border:none; border-radius:8px; font-weight:bold; margin-bottom:15px;">🌍 Karten Offline laden</button>`;
         clubs.forEach((c,i) => {
-            l.innerHTML += `<div style="padding:15px; border-bottom:1px solid #333; cursor:pointer;" onclick="currentClub=clubs[${i}]; renderClubButtons(${i}); closeSelectModal(); updateShotPattern();"><b>${c.name}</b> (${c.total}m)</div>`;
+            l.innerHTML += `<div style="padding:15px; border-bottom:1px solid #333; cursor:pointer;" onclick="currentClub=clubs[${i}]; renderClubScroll(${i}); closeSelectModal(); updateShotPattern();"><b>${c.name}</b> (${c.total}m)</div>`;
         });
         document.getElementById('selectModal').style.display = 'flex'; 
     }
     function closeSelectModal() { document.getElementById('selectModal').style.display = 'none'; }
-    function openWindModal() { document.getElementById('windModal').style.display = 'flex'; }
-    function closeWindModal() { document.getElementById('windModal').style.display = 'none'; }
 
     async function preloadMapAction() {
         document.getElementById('loader').style.display = 'flex';
+        closeDistTable();
         closeSelectModal();
+        var zooms = [16, 17, 18];
         for(let i=1; i<=18; i++) {
-            document.getElementById('loadStatus').innerText = "Lade Loch " + i + "...";
             var t = courseData.features.find(f => f.properties.hole === i && f.properties.type === 'tee');
             var g = courseData.features.find(f => f.properties.hole === i && f.properties.type === 'green');
             if(t && g) {
                 var p1 = [t.geometry.coordinates[1], t.geometry.coordinates[0]];
                 var p2 = [g.geometry.coordinates[1], g.geometry.coordinates[0]];
-                map.fitBounds([p1, p2], {maxZoom: 18}); 
+                for(let z of zooms) {
+                    document.getElementById('loadStatus').innerText = `Loch ${i} (Zoom ${z})...`;
+                    map.setView(p1, z); await new Promise(r => setTimeout(r, 800));
+                    map.setView(p2, z); await new Promise(r => setTimeout(r, 800));
+                }
             }
-            await new Promise(r => setTimeout(r, 1000));
         }
         document.getElementById('loader').style.display = 'none';
         loadHole(1);
