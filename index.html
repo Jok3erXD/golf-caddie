@@ -7,17 +7,17 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Base Setup - Dark Mode */
-        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #000; color: white; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; background: #000; }
+        /* Base Setup - 100dvh für mobile Browser */
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: white; overflow: hidden; }
+        #map { height: 100vh; height: 100dvh; width: 100vw; background: #121212; }
         
-        /* Unsichtbares Touchpad für Joystick-Modus */
+        /* Touchpad Layer */
         #touchPad {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 1500; display: none; cursor: move; touch-action: none;
         }
 
-        /* Oben: Loch-Leiste (Transparent & Floating) */
+        /* Oben: Loch-Leiste */
         .controls-top {
             position: absolute; top: 10px; left: 0; right: 0; 
             padding-top: env(safe-area-inset-top); 
@@ -26,7 +26,6 @@
             pointer-events: auto;
         }
         .controls-top::-webkit-scrollbar { display: none; }
-        
         .btn-hole {
             background: rgba(0,0,0,0.6); color: #ccc; border: 1px solid rgba(255,255,255,0.2); 
             backdrop-filter: blur(5px); padding: 8px 14px; 
@@ -44,9 +43,9 @@
         .hud-left, .hud-right { display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
         .hud-right { align-items: flex-end; }
         
-        /* Badges (Floating Look) */
+        /* Badges */
         .hud-badge {
-            background: rgba(0, 0, 0, 0.7); padding: 8px 12px; border-radius: 12px;
+            background: rgba(0, 0, 0, 0.6); padding: 8px 12px; border-radius: 12px;
             border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(8px);
             display: flex; flex-direction: column; min-width: 80px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
@@ -68,7 +67,7 @@
             display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
 
-        /* Rechte Buttons (Glassmorphism) */
+        /* Rechte Buttons */
         .btn-icon-square {
             background: rgba(0, 0, 0, 0.6); width: 46px; height: 46px; border-radius: 12px;
             border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(8px);
@@ -81,24 +80,27 @@
         .icon-lbl { font-size: 9px; color: #ccc; text-transform: uppercase; margin-top: 2px; font-weight: 600; }
         .btn-icon-square.active .icon-lbl { color: white; }
 
-        /* Unten: Schläger Leiste (FLOATING - KEIN BALKEN) */
+        /* Unten: Schläger Leiste (ANCHORED BOTTOM) */
         .controls-bottom { 
-            position: absolute; bottom: 20px; left: 0; right: 0;
-            z-index: 1000; height: auto;
-            /* Transparent damit Karte durchscheint */
-            background: transparent; 
-            padding: 0; 
+            position: absolute; 
+            bottom: 0; left: 0; right: 0; 
+            z-index: 1000; 
+            /* Kein Height setzen, Flexbox regelt das */
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
             padding-bottom: env(safe-area-inset-bottom);
-            display: flex; justify-content: center;
-            pointer-events: none; /* Klicks daneben gehen auf Karte */
+            padding-top: 30px; /* Fade-Bereich */
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-end; /* Drückt alles nach unten */
+            pointer-events: none;
         }
         
         .club-container {
             display: flex; overflow-x: auto; gap: 10px; 
             -webkit-overflow-scrolling: touch; scrollbar-width: none;
-            pointer-events: auto; /* Buttons wieder klickbar */
-            padding: 10px 15px;
-            max-width: 100%;
+            pointer-events: auto; 
+            padding: 0 15px 10px 15px; /* Nur wenig Padding unten */
+            width: 100%;
         }
         .club-container::-webkit-scrollbar { display: none; }
         
@@ -109,7 +111,6 @@
             display: inline-block; width: 75px; flex-shrink: 0; color: #eee;
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         }
-        /* Aktiver Schläger: Blau & Grösser */
         .club-card.selected { 
             border-color: #007AFF; background: #007AFF; color: white;
             box-shadow: 0 0 15px rgba(0,122,255,0.6); transform: scale(1.05);
@@ -118,10 +119,20 @@
         .club-name { font-weight: 800; font-size: 16px; display: block; }
         .club-dist { font-size: 11px; color: #999; display: block; margin-top: 3px; font-weight: 600; }
 
-        /* Calibration Button (Schwebt über Schlägern) */
-        .calib-btn-container {
-            position: absolute; bottom: 130px; left: 50%; transform: translateX(-50%); z-index: 950;
+        .btn-action {
+            background: #2c2c2e; color: white; border: 1px solid #3a3a3c; border-radius: 10px;
+            width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;
             pointer-events: auto;
+            margin-bottom: 10px;
+        }
+
+        /* Calibration Button (Tiefer gesetzt) */
+        .calib-btn-container {
+            position: absolute; 
+            bottom: 95px; /* Knapp über den Schlägern (~75px hoch + padding) */
+            left: 50%; transform: translateX(-50%); z-index: 950;
+            pointer-events: auto;
+            padding-bottom: env(safe-area-inset-bottom);
         }
         .btn-calib {
             background: #FFD60A; color: black; border: none; padding: 10px 24px;
@@ -131,9 +142,10 @@
         
         /* FERTIG Button */
         #stopRemoteBtn {
-            display: none; position: absolute; bottom: 130px; left: 50%; transform: translateX(-50%);
+            display: none; position: absolute; bottom: 95px; left: 50%; transform: translateX(-50%);
             z-index: 1600; background: #FF3B30; color: white; border: none; padding: 12px 30px;
             border-radius: 30px; font-weight: 800; font-size: 16px; box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
         /* Modals */
@@ -179,22 +191,26 @@
         @keyframes pulse-blue { 0% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(0, 122, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); } }
 
         /* PIN Styles - PERFORMANCE OPTIMIZED */
-        .custom-pin {
-            background-color: #007AFF; width: 24px; height: 24px; 
-            border: 3px solid white; border-radius: 50%; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-            /* WICHTIG: Keine Transition für flüssiges Bewegen! */
-            transition: none !important; 
+        .custom-pin-body {
+            position: absolute; top: -45px; left: -18px;
+            width: 36px; height: 36px;
+            background-color: #007AFF;
+            border: 3px solid white; border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: white;
+            transition: none; /* No Lag */
         }
-        /* Nur beim Mode-Wechsel darf es kurz animieren (via transform) */
-        .custom-pin.mode-switch {
-             transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s !important;
+        .custom-pin-stick {
+            position: absolute; bottom: 0; left: -1px;
+            width: 2px; height: 15px; background: rgba(255,255,255,0.8);
         }
-        .custom-pin.active {
-            background-color: #FF3B30; border-color: #FFD60A;
-            transform: scale(1.4); 
-            box-shadow: 0 0 15px rgba(255, 59, 48, 0.6);
-            z-index: 9999 !important;
+        
+        /* Aktiv Status */
+        .pin-active .custom-pin-body {
+            background-color: #FF453A; border-color: #FFD60A;
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(255, 69, 58, 0.6);
         }
     </style>
 </head>
@@ -207,8 +223,7 @@
 
 <div id="map"></div>
 
-<div id="touchPad"></div>
-<button id="stopRemoteBtn" onclick="toggleRemoteMode()">FERTIG</button>
+<button id="stopRemoteBtn" onclick="toggleEditMode(false)">FERTIG</button>
 
 <div class="hud-container">
     <div class="hud-left">
@@ -259,6 +274,7 @@
 
 <div class="controls-bottom">
     <div id="clubScroll" class="club-container"></div>
+    <button class="btn-action" onclick="openSettingsModal()">⚙️</button>
 </div>
 
 <div id="windModal" class="modal-overlay" onclick="closeWindModal()">
@@ -361,7 +377,7 @@
     }
 
     var currentClub, startPoint, greenPoint, targetMarker, startMarker;
-    var remoteActive = false; 
+    var editMode = false; 
     var gpsActive = false;
     var gpsWatchId = null;
     var currentHoleNum = 1;
@@ -380,16 +396,16 @@
         greenPoint = [green.geometry.coordinates[1], green.geometry.coordinates[0]];
 
         calibFactor = 1.0; updateCalibUI();
-        stopGPS(false); // Reset GPS, kein Autojump nötig da wir eh setzen
+        stopGPS(false);
 
         uiLayer.clearLayers();
         shotLayer.clearLayers();
 
-        // Start Marker (Weiss)
+        // Start Marker
         startMarker = L.marker(startPoint, { draggable: true, icon: L.divIcon({ className: 'tee-marker', iconSize:[18,18] }) })
          .addTo(uiLayer).on('drag', e => { 
              startPoint = [e.latlng.lat, e.latlng.lng]; 
-             stopGPS(false); // Manuelles Ziehen = GPS Aus (ohne Reset)
+             stopGPS(false); 
              updateShotPattern(); 
          });
 
@@ -400,10 +416,22 @@
         var bearing = turf.bearing(turf.point([startPoint[1], startPoint[0]]), turf.point([greenPoint[1], greenPoint[0]]));
         var landGeo = turf.destination(turf.point([startPoint[1], startPoint[0]]), currentClub.total/1000, bearing);
         
-        var pinIcon = L.divIcon({ className: 'custom-pin', iconSize: [24, 24], iconAnchor: [12, 12] });
+        // BLUE PIN WITH OFFSET BODY
+        var pinHtml = `
+            <div class="custom-pin-body">
+                <div style="font-size:20px;">+</div>
+            </div>
+            <div class="custom-pin-stick"></div>
+        `;
+        var pinIcon = L.divIcon({ 
+            className: 'custom-pin-wrapper', 
+            html: pinHtml,
+            iconSize: [2, 15], 
+            iconAnchor: [1, 15] 
+        });
         
         targetMarker = L.marker([landGeo.geometry.coordinates[1], landGeo.geometry.coordinates[0]], {icon: pinIcon, draggable:true, zIndexOffset: 2000}).addTo(uiLayer);
-        targetMarker.on('click', toggleRemoteMode);
+        targetMarker.on('click', function() { toggleEditMode(true); });
         targetMarker.on('drag', updateShotPattern);
 
         map.fitBounds([startPoint, greenPoint], {padding: [40, 40], animate: false});
@@ -411,10 +439,60 @@
         setTimeout(() => updateShotPattern(), 100);
     }
 
+    // --- PIN EDIT MODE ---
+    function toggleEditMode(active) {
+        editMode = active;
+        var btn = document.getElementById('stopRemoteBtn');
+        var calib = document.getElementById('calibContainer');
+        var el = targetMarker.getElement();
+
+        if(editMode) {
+            btn.style.display = 'block';
+            calib.style.display = 'none';
+            if(el) el.classList.add('pin-active');
+            
+            // Joystick-Logic aktivieren
+            document.getElementById('touchPad').style.display = 'block';
+            map.dragging.disable();
+        } else {
+            btn.style.display = 'none';
+            calib.style.display = 'block';
+            if(el) el.classList.remove('pin-active');
+            
+            // Joystick-Logic deaktivieren
+            document.getElementById('touchPad').style.display = 'none';
+            map.dragging.enable();
+        }
+    }
+
+    // --- REMOTE CONTROL (JOYSTICK) ---
+    var touchPad = document.getElementById('touchPad');
+    var lastX, lastY;
+
+    function handleInputStart(x, y) { lastX = x; lastY = y; }
+    function handleInputMove(x, y) {
+        if(!editMode) return;
+        var dx = x - lastX; var dy = y - lastY;
+        
+        var currentLatLng = targetMarker.getLatLng();
+        var point = map.latLngToContainerPoint(currentLatLng);
+        var newPoint = L.point(point.x + dx, point.y + dy);
+        var newLatLng = map.containerPointToLatLng(newPoint);
+        
+        targetMarker.setLatLng(newLatLng);
+        updateShotPattern();
+        lastX = x; lastY = y;
+    }
+
+    touchPad.addEventListener('mousedown', e => handleInputStart(e.clientX, e.clientY));
+    touchPad.addEventListener('mousemove', e => { if(e.buttons === 1) handleInputMove(e.clientX, e.clientY); });
+    touchPad.addEventListener('touchstart', e => { handleInputStart(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, {passive: false});
+    touchPad.addEventListener('touchmove', e => { handleInputMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, {passive: false});
+
+
     // --- GPS TRACKING ---
     function toggleGPS() {
-        if(gpsActive) { stopGPS(true); return; } // True = Jump back to Tee
-        
+        if(gpsActive) { stopGPS(true); return; } 
         if(!navigator.geolocation) { alert("GPS nicht verfügbar"); return; }
         
         gpsActive = true;
@@ -442,10 +520,7 @@
         if(gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
         
         if(startMarker) {
-            var el = startMarker.getElement();
-            if(el) el.classList.remove('gps-active');
-            
-            // Wenn explizit ausgeschaltet (Button), springe zurück zum Tee
+            startMarker.getElement().classList.remove('gps-active');
             if(resetToTee) {
                 var tee = courseData.features.find(f => f.properties.hole === currentHoleNum && f.properties.type === 'tee');
                 if(tee) {
@@ -456,59 +531,6 @@
             }
         }
     }
-
-    // --- REMOTE TOUCH CONTROL ---
-    function toggleRemoteMode() {
-        remoteActive = !remoteActive;
-        var pad = document.getElementById('touchPad');
-        var btn = document.getElementById('stopRemoteBtn');
-        var calib = document.getElementById('calibContainer');
-        var pinIconDiv = targetMarker.getElement();
-
-        if(remoteActive) {
-            pad.style.display = 'block';
-            btn.style.display = 'block';
-            calib.style.display = 'none'; 
-            if(pinIconDiv) {
-                pinIconDiv.classList.add('mode-switch'); // Enable transition
-                setTimeout(() => { pinIconDiv.classList.add('active'); }, 10);
-            }
-            map.dragging.disable(); 
-        } else {
-            pad.style.display = 'none';
-            btn.style.display = 'none';
-            calib.style.display = 'block';
-            if(pinIconDiv) {
-                pinIconDiv.classList.remove('active');
-                setTimeout(() => { pinIconDiv.classList.remove('mode-switch'); }, 200); // Remove transition after anim
-            }
-            map.dragging.enable();
-        }
-    }
-
-    var touchPad = document.getElementById('touchPad');
-    var lastX, lastY;
-
-    function handleInputStart(x, y) { lastX = x; lastY = y; }
-    function handleInputMove(x, y) {
-        if(!remoteActive) return;
-        var dx = x - lastX; var dy = y - lastY;
-        
-        var currentLatLng = targetMarker.getLatLng();
-        var point = map.latLngToContainerPoint(currentLatLng);
-        var newPoint = L.point(point.x + dx, point.y + dy);
-        var newLatLng = map.containerPointToLatLng(newPoint);
-        
-        targetMarker.setLatLng(newLatLng);
-        updateShotPattern();
-        lastX = x; lastY = y;
-    }
-
-    touchPad.addEventListener('mousedown', e => handleInputStart(e.clientX, e.clientY));
-    touchPad.addEventListener('mousemove', e => { if(e.buttons === 1) handleInputMove(e.clientX, e.clientY); });
-    
-    touchPad.addEventListener('touchstart', e => { handleInputStart(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, {passive: false});
-    touchPad.addEventListener('touchmove', e => { handleInputMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, {passive: false});
 
     // --- ACTIONS ---
     function calibrateShot() {
