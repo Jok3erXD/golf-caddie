@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Rheinblick Tour GPS</title>
+    <title>Rheinblick Tour Pro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,6 +11,12 @@
         body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: white; overflow: hidden; }
         #map { height: 100vh; width: 100vw; background: #121212; }
         
+        /* Touchpad Layer (Joystick Modus) */
+        #touchPad {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1500; display: none; cursor: move; touch-action: none;
+        }
+
         /* Oben: Loch-Leiste */
         .controls-top {
             position: absolute; top: 10px; left: 0; right: 0; 
@@ -70,14 +76,15 @@
         .icon-lbl { font-size: 8px; color: #aaa; text-transform: uppercase; margin-top: 2px; }
         .btn-icon-square.active .icon-lbl { color: white; }
 
-        /* Unten: Schläger Leiste (FIXED) */
+        /* Unten: Schläger Leiste (FIXED BOTTOM CLEAN) */
         .controls-bottom { 
             position: absolute; bottom: 0; left: 0; right: 0;
             z-index: 1000; height: auto;
-            background: rgba(20, 20, 20, 0.95); border-top: 1px solid #333;
+            background: #1c1c1e; /* Solider Hintergrund gegen "Floating" */
+            border-top: 1px solid #333;
             padding: 10px 10px 20px 10px;
-            padding-bottom: calc(15px + env(safe-area-inset-bottom));
-            display: flex; align-items: center;
+            padding-bottom: calc(15px + env(safe-area-inset-bottom)); /* iPhone Safe Area */
+            display: flex; align-items: center; gap: 10px;
         }
         
         .club-container {
@@ -87,7 +94,7 @@
         .club-container::-webkit-scrollbar { display: none; }
         
         .club-card {
-            background: rgba(44, 44, 46, 1); padding: 10px 0; border-radius: 12px; 
+            background: #2c2c2e; padding: 10px 0; border-radius: 12px; 
             text-align: center; border: 1px solid #3a3a3c; cursor: pointer;
             display: inline-block; width: 70px; flex-shrink: 0; color: #eee;
             transition: transform 0.1s;
@@ -100,7 +107,12 @@
         .club-name { font-weight: 800; font-size: 15px; display: block; }
         .club-dist { font-size: 11px; color: #888; display: block; margin-top: 2px; }
 
-        /* Calibration Button (Schwebt über der Leiste) */
+        .btn-action {
+            background: #2c2c2e; color: white; border: 1px solid #3a3a3c; border-radius: 10px;
+            width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;
+        }
+
+        /* Calibration Button */
         .calib-btn-container {
             position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); z-index: 950;
             padding-bottom: env(safe-area-inset-bottom);
@@ -114,7 +126,7 @@
         /* FERTIG Button (Nur sichtbar im roten Modus) */
         #stopRemoteBtn {
             display: none; position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%);
-            z-index: 1550; background: #FF3B30; color: white; border: none; padding: 12px 30px;
+            z-index: 1600; background: #FF3B30; color: white; border: none; padding: 12px 30px;
             border-radius: 30px; font-weight: 800; font-size: 16px; box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
 
@@ -129,7 +141,7 @@
             border-radius: 16px; padding: 20px; border: 1px solid #333; text-align: center;
         }
         
-        /* Distanz Tabelle */
+        /* Distanz Tabelle Fix */
         .dist-table { width: 100%; border-collapse: collapse; margin-top: 10px; color: #eee; font-size: 14px; }
         .dist-table th { border-bottom: 1px solid #444; padding: 8px; color: #888; font-size: 11px; }
         .dist-table th:first-child { text-align: left; padding-left: 10px; }
@@ -153,41 +165,32 @@
 
         .map-label { color: white; font-weight: 700; text-shadow: 0 1px 3px black; font-size: 12px; text-align: center; pointer-events: none; }
         
-        /* PIN Styles & Wurstfinger Fix */
-        /* Wir nutzen HTML Marker für das Icon, um den Offset zu bauen */
-        .custom-pin-body {
-            position: absolute; top: -45px; left: -18px; /* Verschiebt den Kopf nach oben */
-            width: 36px; height: 36px;
-            background-color: #007AFF;
-            border: 3px solid white; border-radius: 50%;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 18px; color: white;
-            transition: transform 0.2s, background-color 0.2s;
-        }
-        .custom-pin-stick {
-            position: absolute; bottom: 0; left: -1px;
-            width: 2px; height: 15px; background: rgba(255,255,255,0.8);
-        }
+        /* Marker Styles */
+        .tee-marker { background: white; border: 4px solid #333; border-radius: 50%; width: 18px; height: 18px; box-shadow: 0 0 5px black; }
         
-        /* Aktiv Status */
-        .pin-active .custom-pin-body {
-            background-color: #FF453A; border-color: #FFD60A;
-            transform: scale(1.2);
-            box-shadow: 0 0 20px rgba(255, 69, 58, 0.6);
-        }
-        
-        /* GPS Punkt (Start) */
-        .tee-marker { 
-            background: white; border: 4px solid #333; border-radius: 50%; 
-            width: 18px; height: 18px; box-shadow: 0 0 5px black; 
-        }
+        /* GPS User Pulse */
         .tee-marker.gps-active {
             border-color: #007AFF;
             box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.4);
-            animation: pulse 2s infinite;
+            animation: pulse-blue 2s infinite;
         }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0,122,255,0.7); } 70% { box-shadow: 0 0 0 10px rgba(0,122,255,0); } 100% { box-shadow: 0 0 0 0 rgba(0,122,255,0); } }
+        @keyframes pulse-blue { 0% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(0, 122, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); } }
+
+        /* PIN Styles */
+        /* Wir nutzen wieder den einfachen Punkt, aber animiert für Red Mode */
+        .custom-pin {
+            background-color: #007AFF; width: 24px; height: 24px; 
+            border: 3px solid white; border-radius: 50%; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            /* KEIN transition auf top/left für Instant-Drag */
+            transition: background-color 0.2s, transform 0.2s; 
+        }
+        .custom-pin.active {
+            background-color: #FF3B30; border-color: #FFD60A;
+            transform: scale(1.4); 
+            box-shadow: 0 0 15px rgba(255, 59, 48, 0.6);
+            z-index: 9999 !important;
+        }
     </style>
 </head>
 <body>
@@ -199,7 +202,8 @@
 
 <div id="map"></div>
 
-<button id="stopRemoteBtn" onclick="toggleEditMode(false)">FERTIG</button>
+<div id="touchPad"></div>
+<button id="stopRemoteBtn" onclick="toggleRemoteMode()">FERTIG</button>
 
 <div class="hud-container">
     <div class="hud-left">
@@ -250,7 +254,8 @@
 
 <div class="controls-bottom">
     <div id="clubScroll" class="club-container"></div>
-    </div>
+    <button class="btn-action" onclick="openSelectModal()">+</button>
+</div>
 
 <div id="windModal" class="modal-overlay" onclick="closeWindModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
@@ -288,6 +293,10 @@
         </div>
         <button onclick="closeSettingsModal()" style="width:100%; padding:12px; background:#333; color:white; border:none; border-radius:10px; margin-top:15px;">Schliessen</button>
     </div>
+</div>
+
+<div id="selectModal" class="modal-overlay" onclick="closeSelectModal()">
+    <div class="modal-content" id="selectList" onclick="event.stopPropagation()"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -350,12 +359,14 @@
     }
 
     var currentClub, startPoint, greenPoint, targetMarker, startMarker;
-    var editMode = false; 
+    var remoteActive = false; 
     var gpsActive = false;
     var gpsWatchId = null;
+    var currentHoleNum = 1;
 
     // --- LOGIK ---
     function loadHole(num) {
+        currentHoleNum = num;
         document.querySelectorAll('.btn-hole').forEach(b => b.classList.remove('active'));
         document.getElementById('h'+num).classList.add('active');
 
@@ -367,16 +378,16 @@
         greenPoint = [green.geometry.coordinates[1], green.geometry.coordinates[0]];
 
         calibFactor = 1.0; updateCalibUI();
-        stopGPS();
+        stopGPS(); // Reset GPS on hole change
 
         uiLayer.clearLayers();
         shotLayer.clearLayers();
 
-        // White Tee Marker
+        // Start Marker (Weiss)
         startMarker = L.marker(startPoint, { draggable: true, icon: L.divIcon({ className: 'tee-marker', iconSize:[18,18] }) })
          .addTo(uiLayer).on('drag', e => { 
              startPoint = [e.latlng.lat, e.latlng.lng]; 
-             stopGPS(); 
+             stopGPS(false); // GPS aus, aber nicht zum Tee springen wenn User manuell zieht
              updateShotPattern(); 
          });
 
@@ -387,27 +398,10 @@
         var bearing = turf.bearing(turf.point([startPoint[1], startPoint[0]]), turf.point([greenPoint[1], greenPoint[0]]));
         var landGeo = turf.destination(turf.point([startPoint[1], startPoint[0]]), currentClub.total/1000, bearing);
         
-        // BLUE PIN WITH OFFSET BODY
-        // Wir bauen das Icon per HTML, damit der "Body" (Kreis) höher ist als der Ankerpunkt (Spitze)
-        var pinHtml = `
-            <div class="custom-pin-body">
-                <div style="font-size:20px;">+</div>
-            </div>
-            <div class="custom-pin-stick"></div>
-        `;
-        var pinIcon = L.divIcon({ 
-            className: 'custom-pin-wrapper', 
-            html: pinHtml,
-            iconSize: [2, 15], // Dummy
-            iconAnchor: [1, 15] // Spitze unten
-        });
+        var pinIcon = L.divIcon({ className: 'custom-pin', iconSize: [24, 24], iconAnchor: [12, 12] });
         
         targetMarker = L.marker([landGeo.geometry.coordinates[1], landGeo.geometry.coordinates[0]], {icon: pinIcon, draggable:true, zIndexOffset: 2000}).addTo(uiLayer);
-        
-        // Klick auf den Marker toggelt den "Edit Modus" (Rot)
-        targetMarker.on('click', function() { toggleEditMode(true); });
-        
-        // Während dem Draggen updaten wir den Kegel
+        targetMarker.on('click', toggleRemoteMode);
         targetMarker.on('drag', updateShotPattern);
 
         map.fitBounds([startPoint, greenPoint], {padding: [40, 40], animate: false});
@@ -415,27 +409,10 @@
         setTimeout(() => updateShotPattern(), 100);
     }
 
-    // --- PIN EDIT MODE ---
-    function toggleEditMode(active) {
-        editMode = active;
-        var btn = document.getElementById('stopRemoteBtn');
-        var calib = document.getElementById('calibContainer');
-        var el = targetMarker.getElement();
-
-        if(editMode) {
-            btn.style.display = 'block';
-            calib.style.display = 'none';
-            if(el) el.classList.add('pin-active');
-        } else {
-            btn.style.display = 'none';
-            calib.style.display = 'block';
-            if(el) el.classList.remove('pin-active');
-        }
-    }
-
     // --- GPS TRACKING ---
     function toggleGPS() {
-        if(gpsActive) { stopGPS(); return; }
+        if(gpsActive) { stopGPS(true); return; } // True = Reset to Tee
+        
         if(!navigator.geolocation) { alert("GPS nicht verfügbar"); return; }
         
         gpsActive = true;
@@ -452,17 +429,77 @@
                     updateShotPattern();
                 }
             },
-            (err) => { console.log(err); stopGPS(); },
+            (err) => { console.log(err); stopGPS(true); },
             { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
         );
     }
 
-    function stopGPS() {
+    function stopGPS(resetToTee) {
         gpsActive = false;
         document.getElementById('btnGPS').classList.remove('active');
         if(gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
-        if(startMarker) startMarker.getElement().classList.remove('gps-active');
+        
+        if(startMarker) {
+            startMarker.getElement().classList.remove('gps-active');
+            
+            // Wenn GPS beendet wird (durch Button), springen wir zum Standard Tee
+            if(resetToTee) {
+                var tee = courseData.features.find(f => f.properties.hole === currentHoleNum && f.properties.type === 'tee');
+                if(tee) {
+                    startPoint = [tee.geometry.coordinates[1], tee.geometry.coordinates[0]];
+                    startMarker.setLatLng(startPoint);
+                    updateShotPattern();
+                }
+            }
+        }
     }
+
+    // --- REMOTE TOUCH CONTROL (HYBRID) ---
+    function toggleRemoteMode() {
+        remoteActive = !remoteActive;
+        var pad = document.getElementById('touchPad');
+        var btn = document.getElementById('stopRemoteBtn');
+        var calib = document.getElementById('calibContainer');
+        var pinIconDiv = targetMarker.getElement();
+
+        if(remoteActive) {
+            pad.style.display = 'block';
+            btn.style.display = 'block';
+            calib.style.display = 'none'; 
+            if(pinIconDiv) pinIconDiv.classList.add('active');
+            map.dragging.disable(); 
+        } else {
+            pad.style.display = 'none';
+            btn.style.display = 'none';
+            calib.style.display = 'block';
+            if(pinIconDiv) pinIconDiv.classList.remove('active');
+            map.dragging.enable();
+        }
+    }
+
+    var touchPad = document.getElementById('touchPad');
+    var lastX, lastY;
+
+    function handleInputStart(x, y) { lastX = x; lastY = y; }
+    function handleInputMove(x, y) {
+        if(!remoteActive) return;
+        var dx = x - lastX; var dy = y - lastY;
+        
+        var currentLatLng = targetMarker.getLatLng();
+        var point = map.latLngToContainerPoint(currentLatLng);
+        var newPoint = L.point(point.x + dx, point.y + dy);
+        var newLatLng = map.containerPointToLatLng(newPoint);
+        
+        targetMarker.setLatLng(newLatLng);
+        updateShotPattern();
+        lastX = x; lastY = y;
+    }
+
+    touchPad.addEventListener('mousedown', e => handleInputStart(e.clientX, e.clientY));
+    touchPad.addEventListener('mousemove', e => { if(e.buttons === 1) handleInputMove(e.clientX, e.clientY); });
+    
+    touchPad.addEventListener('touchstart', e => { handleInputStart(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, {passive: false});
+    touchPad.addEventListener('touchmove', e => { handleInputMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, {passive: false});
 
     // --- ACTIONS ---
     function calibrateShot() {
@@ -624,7 +661,7 @@
     }
     function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
     
-    function openSelectModal() { openSettingsModal(); } // Redirect Plus Button
+    function openSelectModal() { openSettingsModal(); }
 
     async function preloadMapAction() {
         document.getElementById('loader').style.display = 'flex';
