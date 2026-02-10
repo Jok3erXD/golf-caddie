@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         /* Base Setup - Dark Mode */
-        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #000; color: white; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; background: #000; }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: white; overflow: hidden; }
+        #map { height: 100vh; width: 100vw; background: #121212; }
         
         /* Unsichtbares Touchpad für Joystick-Modus */
         #touchPad {
@@ -81,23 +81,25 @@
         .icon-lbl { font-size: 9px; color: #ccc; text-transform: uppercase; margin-top: 2px; font-weight: 600; }
         .btn-icon-square.active .icon-lbl { color: white; }
 
-        /* Unten: Schläger Leiste (FLOATING - KEIN BALKEN) */
+        /* Unten: Schläger Leiste (FIXED BOTTOM 0) */
         .controls-bottom { 
-            position: absolute; bottom: 20px; left: 0; right: 0;
+            position: absolute; 
+            bottom: 0; /* Hart am Boden */
+            left: 0; right: 0;
             z-index: 1000; height: auto;
-            /* Transparent damit Karte durchscheint */
             background: transparent; 
-            padding: 0; 
+            /* Nur Padding für Safe Area, kein zusätzlicher Abstand */
             padding-bottom: env(safe-area-inset-bottom);
+            padding-top: 10px; 
             display: flex; justify-content: center;
-            pointer-events: none; /* Klicks daneben gehen auf Karte */
+            pointer-events: none;
         }
         
         .club-container {
             display: flex; overflow-x: auto; gap: 10px; 
             -webkit-overflow-scrolling: touch; scrollbar-width: none;
-            pointer-events: auto; /* Buttons wieder klickbar */
-            padding: 10px 15px;
+            pointer-events: auto; 
+            padding: 5px 15px 15px 15px; /* Etwas Padding unten für Touch */
             max-width: 100%;
         }
         .club-container::-webkit-scrollbar { display: none; }
@@ -109,7 +111,6 @@
             display: inline-block; width: 75px; flex-shrink: 0; color: #eee;
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         }
-        /* Aktiver Schläger: Blau & Grösser */
         .club-card.selected { 
             border-color: #007AFF; background: #007AFF; color: white;
             box-shadow: 0 0 15px rgba(0,122,255,0.6); transform: scale(1.05);
@@ -118,10 +119,13 @@
         .club-name { font-weight: 800; font-size: 16px; display: block; }
         .club-dist { font-size: 11px; color: #999; display: block; margin-top: 3px; font-weight: 600; }
 
-        /* Calibration Button (Schwebt über Schlägern) */
+        /* Calibration Button (Angepasst an tiefere Leiste) */
         .calib-btn-container {
-            position: absolute; bottom: 130px; left: 50%; transform: translateX(-50%); z-index: 950;
+            position: absolute; 
+            bottom: 110px; /* Etwas tiefer da Leiste tiefer ist */
+            left: 50%; transform: translateX(-50%); z-index: 950;
             pointer-events: auto;
+            padding-bottom: env(safe-area-inset-bottom);
         }
         .btn-calib {
             background: #FFD60A; color: black; border: none; padding: 10px 24px;
@@ -131,9 +135,10 @@
         
         /* FERTIG Button */
         #stopRemoteBtn {
-            display: none; position: absolute; bottom: 130px; left: 50%; transform: translateX(-50%);
+            display: none; position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%);
             z-index: 1600; background: #FF3B30; color: white; border: none; padding: 12px 30px;
             border-radius: 30px; font-weight: 800; font-size: 16px; box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
         /* Modals */
@@ -207,8 +212,7 @@
 
 <div id="map"></div>
 
-<div id="touchPad"></div>
-<button id="stopRemoteBtn" onclick="toggleRemoteMode()">FERTIG</button>
+<button id="stopRemoteBtn" onclick="toggleEditMode(false)">FERTIG</button>
 
 <div class="hud-container">
     <div class="hud-left">
@@ -361,7 +365,7 @@
     }
 
     var currentClub, startPoint, greenPoint, targetMarker, startMarker;
-    var remoteActive = false; 
+    var editMode = false; 
     var gpsActive = false;
     var gpsWatchId = null;
     var currentHoleNum = 1;
