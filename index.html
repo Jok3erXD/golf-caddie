@@ -20,7 +20,7 @@
 
         /* Oben: Loch-Leiste (Transparent & Floating) */
         .controls-top {
-            position: absolute; top: 10px; left: 0; right: 0; 
+            position: absolute; top: 8px; left: 0; right: 0; 
             padding-top: env(safe-area-inset-top); 
             z-index: 1000; display: flex; gap: 6px; overflow-x: auto; 
             padding-left: 10px; padding-right: 10px; scrollbar-width: none;
@@ -123,7 +123,7 @@
 
         /* Calibration Button (Schwebt über Schlägern) */
         .calib-btn-container {
-            position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 950;
+            position: absolute; bottom: 85px; left: 50%; transform: translateX(-50%); z-index: 950;
             pointer-events: auto;
         }
         .btn-calib {
@@ -134,9 +134,10 @@
         
         /* FERTIG Button */
         #stopRemoteBtn {
-            display: none; position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
-            z-index: 1600; background: #FF3B30; color: white; border: none; padding: 12px 30px;
-            border-radius: 30px; font-weight: 800; font-size: 16px; box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            display: none; position: absolute; bottom: 85px; left: 50%; transform: translateX(-50%);
+            z-index: 1600; background: #FF3B30; color: white; border: none; padding: 10px 24px;
+            border-radius: 24px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.6)
+            display: flex; align-items: center; gap: 8px;
         }
 
         /* Modals */
@@ -310,18 +311,18 @@
 <script>
     // --- DATEN ---
     var clubs = [
-        { id: 'drv', name: "Driver", carry: 176, total: 204, spreadFactor: 0.32 }, 
-        { id: 'safe',name: "Dr Safe",carry: 150, total: 185, spreadFactor: 0.28 },
-        { id: 'h4',  name: "Hyb 4",  carry: 161, total: 177, spreadFactor: 0.26 },
-        { id: 'i5',  name: "E 5",    carry: 151, total: 173, spreadFactor: 0.25 },
-        { id: 'i6',  name: "E 6",    carry: 145, total: 160, spreadFactor: 0.24 },
-        { id: 'i7',  name: "E 7",    carry: 135, total: 147, spreadFactor: 0.23 },
-        { id: 'i8',  name: "E 8",    carry: 130, total: 139, spreadFactor: 0.22 },
-        { id: 'i9',  name: "E 9",    carry: 118, total: 125, spreadFactor: 0.21 },
+        { id: 'drv', name: "Driver", carry: 176, total: 204, spreadFactor: 0.43 }, 
+        { id: 'safe',name: "Dr Safe",carry: 150, total: 185, spreadFactor: 0.30 },
+        { id: 'h4',  name: "Hyb 4",  carry: 161, total: 177, spreadFactor: 0.28 },
+        { id: 'i5',  name: "E 5",    carry: 151, total: 173, spreadFactor: 0.28 },
+        { id: 'i6',  name: "E 6",    carry: 145, total: 160, spreadFactor: 0.28 },
+        { id: 'i7',  name: "E 7",    carry: 135, total: 147, spreadFactor: 0.25 },
+        { id: 'i8',  name: "E 8",    carry: 130, total: 139, spreadFactor: 0.25 },
+        { id: 'i9',  name: "E 9",    carry: 118, total: 125, spreadFactor: 0.25 },
         { id: 'pw',  name: "PW",     carry: 74,  total: 82,  spreadFactor: 0.20 },
-        { id: '52',  name: "52°",    carry: 60,  total: 66,  spreadFactor: 0.18 },
-        { id: '56',  name: "56°",    carry: 51,  total: 57,  spreadFactor: 0.18 },
-        { id: '60',  name: "60°",    carry: 45,  total: 51,  spreadFactor: 0.18 }
+        { id: '52',  name: "52°",    carry: 60,  total: 66,  spreadFactor: 0.20 },
+        { id: '56',  name: "56°",    carry: 51,  total: 57,  spreadFactor: 0.20 },
+        { id: '60',  name: "60°",    carry: 45,  total: 51,  spreadFactor: 0.20 }
     ];
 
     var courseData = { "type": "FeatureCollection", "features": [
@@ -700,6 +701,7 @@
 </script>
 </body>
 </html>
+
 
 
 
