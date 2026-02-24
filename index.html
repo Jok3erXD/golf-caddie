@@ -136,7 +136,7 @@
         #stopRemoteBtn {
             display: none; position: absolute; bottom: 85px; left: 50%; transform: translateX(-50%);
             z-index: 1600; background: #FF3B30; color: white; border: none; padding: 10px 24px;
-            border-radius: 24px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.6)
+            border-radius: 24px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
             display: flex; align-items: center; gap: 8px;
         }
 
@@ -578,10 +578,28 @@
         document.getElementById('gpsDistDisplay').innerText = Math.round(distToTarget);
         document.getElementById('greenDistDisplay').innerText = Math.round(distToGreen) + " m Grün";
 
-        // Physics
+        // --- PHYSICS UPDATE: DECADE GOLF LOGIC ---
+        var windMph = 0;
+        if(windStrength === 1) windMph = 8;
+        if(windStrength === 2) windMph = 15;
+        if(windStrength === 3) windMph = 20;
+
         var windMod = 0;
-        if(windDir === 'head') windMod = -0.05 * windStrength; 
-        if(windDir === 'tail') windMod = 0.05 * windStrength;
+
+        // Headwind: 1 mph = 1% weniger Distanz
+        if(windDir === 'head') {
+            windMod = -(windMph / 100); 
+        }
+        
+        // Tailwind: 1 mph = 0.5% mehr Distanz (nur die Hälfte!)
+        if(windDir === 'tail') {
+            windMod = (windMph / 2) / 100;
+        }
+
+        // Seitenwind: Minimaler Distanzverlust durch Reibung
+        if(windDir === 'left' || windDir === 'right') {
+             windMod = -(windMph * 0.1) / 100; 
+        }
 
         var effCarry = (currentClub.carry * (1 + windMod)) / calibFactor;
         var effTotal = (currentClub.total * (1 + windMod)) / calibFactor;
@@ -589,7 +607,10 @@
         var sideShiftAngle = 0;
         if(windDir === 'left') sideShiftAngle = 90; 
         if(windDir === 'right') sideShiftAngle = -90;
-        var driftDist = (windDir === 'left' || windDir === 'right') ? (effTotal * 0.04 * windStrength) : 0;
+        
+        var driftFactor = 0.008; 
+        var driftDist = (windDir === 'left' || windDir === 'right') ? (effTotal * driftFactor * windMph) : 0;
+        // -----------------------------------------
 
         // Drawing
         var startGeo = turf.point([sPos.lng, sPos.lat]);
@@ -700,10 +721,3 @@
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
